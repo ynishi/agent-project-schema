@@ -27,7 +27,7 @@ The stub must be gitignored by the project. `aps-gen-adapter` refuses to write a
 
 Unverified, and therefore not relied on: whether `.worktreeinclude` copies files under `.claude/`, and whether a checkout containing `.claude/CLAUDE.md` suppresses `AGENTS.md` the way `CLAUDE.local.md` does. Both are open questions; `aps-wt-fork` covers the first regardless, because it copies the stub itself.
 
-Settings that are not files: `worktree.location` and `worktree.baseRef` are recorded in the instance for reference. `aps-gen-adapter` does not write Claude Code settings; that stays with the user's settings management.
+Settings that are not files: `worktree.location` and `worktree.baseRef` are recorded in the instance for reference. `aps-gen-adapter` does not write Claude Code settings; that stays with the user's settings management. Note that, per the [settings reference](https://code.claude.com/docs/en/settings-reference#worktree), `worktree.location` is read only by the Claude Desktop app's SSH sessions; `--worktree`, the `EnterWorktree` tool and isolated subagents ignore it and always create under `<repo>/.claude/worktrees/`. `baseRef` is honoured by the CLI.
 
 ## Build seed (any harness)
 
