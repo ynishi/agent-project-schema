@@ -1,0 +1,12 @@
+{
+  "$schema": "../schema/project.schema.json",
+  "project": "example",
+  "remote": "github.com/owner/example",
+  "instruction": "~/agent-instructions/example.md",
+  "env": [".env", ".claude/settings.local.json", ".mcp.json"],
+  "build": { "seed": "cargo shared-target --dest {worktree}/target", "artifact": "target" },
+  "state": { "docs": "https://example.invalid/docs/example" },
+  "adapters": {
+    "claude-code": { "stub": ".claude/CLAUDE.md", "worktree": { "location": ".worktrees", "baseRef": "head" } }
+  }
+}

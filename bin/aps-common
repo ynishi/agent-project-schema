@@ -1,0 +1,29 @@
+# shellcheck shell=sh
+# Shared helpers for the aps-* scripts. Sourced, not executed.
+set -eu
+
+need() { command -v "$1" >/dev/null 2>&1 || { echo "aps: missing dependency: $1" >&2; exit 1; }; }
+need jq
+
+load_instance() {
+  INSTANCE="$1"
+  [ -f "$INSTANCE" ] || { echo "aps: instance not found: $INSTANCE" >&2; exit 1; }
+  jq -e . "$INSTANCE" >/dev/null 2>&1 || { echo "aps: instance is not valid JSON: $INSTANCE" >&2; exit 1; }
+  PROJECT=$(jq -r '.project // empty' "$INSTANCE")
+  INSTRUCTION=$(jq -r '.instruction // empty' "$INSTANCE")
+  [ -n "$PROJECT" ] && [ -n "$INSTRUCTION" ] || { echo "aps: instance lacks project or instruction" >&2; exit 1; }
+}
+
+env_list() { jq -r '.env[]?' "$INSTANCE"; }
+cc_stub() { jq -r '.adapters["claude-code"].stub // empty' "$INSTANCE"; }
+codex_stub() { jq -r '.adapters.codex.stub // empty' "$INSTANCE"; }
+build_seed() { jq -r '.build.seed // empty' "$INSTANCE"; }
+build_artifact() { jq -r '.build.artifact // empty' "$INSTANCE"; }
+
+# Every checkout-relative file an adapter places or a fork must carry.
+fork_list() {
+  env_list
+  s=$(cc_stub); [ -n "$s" ] && printf '%s\n' "$s"
+  s=$(codex_stub); [ -n "$s" ] && printf '%s\n' "$s"
+  return 0
+}

@@ -1,0 +1,35 @@
+#!/bin/sh
+# aps-gen-adapter <instance.json> <checkout>
+# Writes the harness adapter files into a checkout: the one-line import stub
+# and .worktreeinclude. Refuses to write a stub that git would track.
+. "$(dirname "$0")/aps-common"
+[ $# -eq 2 ] || { echo "usage: aps-gen-adapter <instance.json> <checkout>" >&2; exit 64; }
+load_instance "$1"; CO="$2"
+[ -d "$CO" ] || { echo "aps: checkout not found: $CO" >&2; exit 1; }
+need git
+
+stub=$(cc_stub)
+if [ -n "$stub" ]; then
+  if git -C "$CO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if ! git -C "$CO" check-ignore -q "$stub"; then
+      echo "aps: refusing: $stub is not gitignored in $CO (the stub must never be tracked)" >&2; exit 2
+    fi
+  fi
+  mkdir -p "$CO/$(dirname "$stub")"
+  printf '@%s\n' "$INSTRUCTION" > "$CO/$stub"
+  echo "aps-gen-adapter: wrote $stub -> @$INSTRUCTION"
+fi
+
+# .worktreeinclude = env list + stub paths. Claude Code copies matching
+# gitignored files into the worktrees it creates.
+tmp="$CO/.worktreeinclude.aps-tmp"
+fork_list | awk 'NF && !seen[$0]++' > "$tmp"
+if [ -s "$tmp" ]; then
+  mv "$tmp" "$CO/.worktreeinclude"
+  echo "aps-gen-adapter: wrote .worktreeinclude ($(wc -l < "$CO/.worktreeinclude" | tr -d ' ') entries)"
+else
+  rm -f "$tmp"
+fi
+
+[ -n "$(codex_stub)" ] && echo "aps-gen-adapter: codex adapter declared but its writer is disabled (format unverified); nothing written" >&2
+exit 0

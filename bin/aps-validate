@@ -1,0 +1,25 @@
+#!/bin/sh
+# aps-validate <instance.json>
+# Structural validation with jq only. Full JSON Schema validation is optional:
+# if `check-jsonschema` is installed it is run as well.
+. "$(dirname "$0")/aps-common"
+[ $# -eq 1 ] || { echo "usage: aps-validate <instance.json>" >&2; exit 64; }
+load_instance "$1"
+fail=0
+say() { echo "aps-validate: $*" >&2; fail=1; }
+
+jq -e '.project | test("^[A-Za-z0-9._-]+$")' "$INSTANCE" >/dev/null || say "project must match ^[A-Za-z0-9._-]+$"
+jq -e '.env | type == "array" and (map(type == "string") | all)' "$INSTANCE" >/dev/null || say "env must be an array of strings"
+jq -e '.env | all(startswith("/") | not)' "$INSTANCE" >/dev/null || say "env entries must be checkout-relative"
+jq -e '.env | length == (unique | length)' "$INSTANCE" >/dev/null || say "env entries must be unique"
+jq -e '.adapters | type == "object" and length >= 1' "$INSTANCE" >/dev/null || say "adapters must name at least one harness"
+jq -e '.adapters | keys | all(. == "claude-code" or . == "codex")' "$INSTANCE" >/dev/null || say "unknown adapter key (known: claude-code, codex)"
+jq -e '(.adapters["claude-code"] // {stub:"x"}) | has("stub")' "$INSTANCE" >/dev/null || say "adapters.claude-code.stub is required"
+jq -e '(.build.seed // "") | (. == "" or contains("{worktree}"))' "$INSTANCE" >/dev/null || say "build.seed should contain {worktree}"
+jq -e 'keys | all(. == "$schema" or . == "project" or . == "remote" or . == "instruction" or . == "env" or . == "build" or . == "state" or . == "adapters")' "$INSTANCE" >/dev/null || say "unknown top-level key"
+
+if command -v check-jsonschema >/dev/null 2>&1; then
+  check-jsonschema --schemafile "$(dirname "$0")/../schema/project.schema.json" "$INSTANCE" || fail=1
+fi
+[ "$fail" -eq 0 ] && echo "aps-validate: ok ($PROJECT)"
+exit "$fail"

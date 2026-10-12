@@ -1,0 +1,23 @@
+#!/bin/sh
+# aps-wt-check <instance.json> <worktree>
+# Lists every forkable file the worktree lacks and whether the build artifact
+# is present. Exit 0 when complete, 2 when anything is missing.
+. "$(dirname "$0")/aps-common"
+[ $# -eq 2 ] || { echo "usage: aps-wt-check <instance.json> <worktree>" >&2; exit 64; }
+load_instance "$1"; WT="$2"
+[ -d "$WT" ] || { echo "aps: worktree not found: $WT" >&2; exit 1; }
+
+missing=0
+for f in $(fork_list | awk 'NF && !seen[$0]++'); do
+  if [ -f "$WT/$f" ]; then echo "aps-wt-check: present $f"; else echo "aps-wt-check: MISSING $f"; missing=1; fi
+done
+art=$(build_artifact)
+if [ -n "$art" ]; then
+  if [ -e "$WT/$art" ]; then echo "aps-wt-check: present $art (build cache)"; else echo "aps-wt-check: MISSING $art (build cache not seeded)"; missing=1; fi
+fi
+stub=$(cc_stub)
+if [ -n "$stub" ] && [ -f "$WT/$stub" ]; then
+  head -n 1 "$WT/$stub" | grep -q "^@" || echo "aps-wt-check: WARN $stub first line is not an import"
+fi
+[ "$missing" -eq 0 ] && echo "aps-wt-check: complete ($PROJECT)" && exit 0
+exit 2

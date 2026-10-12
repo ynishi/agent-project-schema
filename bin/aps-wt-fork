@@ -1,0 +1,31 @@
+#!/bin/sh
+# aps-wt-fork <instance.json> <main-checkout> <worktree>
+# Copies every forkable file (env list + stubs) that exists in the main
+# checkout into the worktree, then runs the build seed if declared.
+# Use after creating a worktree from the shell; Claude Code's own worktree
+# creation already applies .worktreeinclude but not the build seed.
+. "$(dirname "$0")/aps-common"
+[ $# -eq 3 ] || { echo "usage: aps-wt-fork <instance.json> <main-checkout> <worktree>" >&2; exit 64; }
+load_instance "$1"; SRC="$2"; DST="$3"
+[ -d "$SRC" ] || { echo "aps: main checkout not found: $SRC" >&2; exit 1; }
+[ -d "$DST" ] || { echo "aps: worktree not found: $DST" >&2; exit 1; }
+[ "$(cd "$SRC" && pwd -P)" != "$(cd "$DST" && pwd -P)" ] || { echo "aps: main checkout and worktree are the same directory" >&2; exit 1; }
+
+fork_list | awk 'NF && !seen[$0]++' | while IFS= read -r f; do
+  if [ -f "$SRC/$f" ]; then
+    mkdir -p "$DST/$(dirname "$f")"
+    cp -p "$SRC/$f" "$DST/$f"
+    echo "aps-wt-fork: copied $f"
+  else
+    echo "aps-wt-fork: absent in main checkout, skipped $f"
+  fi
+done
+
+seed=$(build_seed)
+if [ -n "$seed" ]; then
+  abs_dst=$(cd "$DST" && pwd -P)
+  cmd=$(printf '%s' "$seed" | sed "s|{worktree}|$abs_dst|g")
+  echo "aps-wt-fork: seeding build cache: $cmd"
+  (cd "$SRC" && sh -c "$cmd")
+fi
+exit 0

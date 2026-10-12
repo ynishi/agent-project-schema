@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ynishi/agent-project-schema/schema/project.schema.json",
+  "title": "APS project instance",
+  "description": "One project in the agent-project-schema tree: instruction, env, build, state and per-harness adapters. A checkout (main or worktree) owns nothing; it receives a fork of these.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "instruction", "env", "adapters"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "project": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+$",
+      "description": "Key of the project. Conventionally the repository directory name."
+    },
+    "remote": {
+      "type": "string",
+      "description": "Optional origin, e.g. github.com/owner/name. Informational."
+    },
+    "instruction": {
+      "type": "string",
+      "description": "Absolute or ~-relative path, on the host, of the project's private instruction file (Markdown). Adapters import it; they never copy its content."
+    },
+    "env": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[^/].*" },
+      "uniqueItems": true,
+      "description": "Checkout-relative paths of gitignored files every checkout needs (.env, local settings). Forked from the main checkout into each worktree. Values stay on the host."
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "type": "string",
+          "description": "Command run from the main checkout to seed the build cache of a new worktree. The literal {worktree} is replaced by the worktree path. Example: cargo shared-target --dest {worktree}/target"
+        },
+        "artifact": {
+          "type": "string",
+          "description": "Checkout-relative path that exists once the cache is seeded, for aps-wt-check. Example: target"
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "docs": {
+          "type": "string",
+          "description": "URL of the hosted document (journal, design notes) for this project. Working state is never kept inside a checkout."
+        }
+      }
+    },
+    "adapters": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "claude-code": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stub"],
+          "properties": {
+            "stub": {
+              "type": "string",
+              "default": ".claude/CLAUDE.md",
+              "description": "Checkout-relative path of the one-line stub that imports the instruction. Must be gitignored by the project."
+            },
+            "worktree": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "location": { "type": "string", "description": "Value for the Claude Code setting worktree.location, e.g. .worktrees" },
+                "baseRef": { "type": "string", "enum": ["fresh", "head"] }
+              }
+            }
+          }
+        },
+        "codex": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stub"],
+          "properties": {
+            "stub": {
+              "type": "string",
+              "default": "AGENTS.override.md",
+              "description": "Placeholder. The writer is disabled until the Codex local-override format is confirmed."
+            }
+          }
+        }
+      }
+    }
+  }
+}

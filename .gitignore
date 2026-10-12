@@ -1,0 +1,7 @@
+# nothing private belongs here; these are build and editor leftovers only
+.DS_Store
+*.swp
+/.worktrees/
+/.claude/worktrees/
+/.smoke/
+/.sandbox-snapshots/
